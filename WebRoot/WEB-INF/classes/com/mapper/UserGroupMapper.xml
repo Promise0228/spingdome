@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.UserGroupMapper" >
+  <resultMap id="BaseResultMap" type="UserGroup" >
+    <id column="group_id" property="groupId"  />
+    <result column="group_name" property="groupName"  />
+    <result column="group_code" property="groupCode"  />
+    <result column="group_desc" property="groupDesc"  />
+    <result column="group_state" property="groupState" />
+  </resultMap>
+  
+  <!-- 查询所有用户组信息 -->
+  <select id="selectUserGroup" resultMap="BaseResultMap">
+  SELECT * FROM user_group 
+  </select>
+  
+  <!-- 根据组Code查询角色表是否有重复的 -->
+	<select id="selectUserGroupByCode" resultMap="BaseResultMap" parameterType="UserGroup">
+		select * from user_group where group_Code=#{groupCode} or
+		group_Name=#{groupName}
+	</select>
+  
+  <!-- 新增用户组信息 -->
+	<insert id="addUserGroup" parameterType="UserGroup">
+	 insert into user_group(group_name,group_Desc,group_Code)
+		values(#{groupName},#{groupDesc},#{groupCode})
+	</insert>
+  
+  <!-- 查询用户组条数 -->
+	<select id="countUserGroup" parameterType="HashMap" resultType="Integer">
+		select count(*) from `user_group`
+	  	<where>
+			<if test="userGroup.groupName!=null and userGroup.groupName!=''">
+				and group_name like "%"#{userGroup.groupName}"%"
+			</if>
+			<if test="userGroup.groupState!=null and userGroup.groupState!=''">
+				and group_state=#{userGroup.groupState}
+			</if>
+		</where> 
+
+	</select>
+  
+  	<!-- 启用、禁用组 -->
+	<update id="restart" parameterType="UserGroup"> 
+	update user_group set
+		group_state=#{groupState} where group_id=#{groupId}
+	</update>
+  </mapper>

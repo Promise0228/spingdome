@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.RepositoryMapper">
+<resultMap type="FileType" id="FileType">
+<id column="file_type_id" property="fileTypeId"/>
+<result column="type_name" property="typeName"/>
+<result column="type_code" property="typeCode"/>
+<result column="parent_id" property="parentId"/>
+<result column="grade" property="grade"/>
+</resultMap>
+<resultMap type="Files" id="Files">
+<id column="file_id" property="fileId"/>
+<result column="file_type_id" property="fileTypeId"/>
+<result column="file_name" property="fileName"/>
+<result column="file_desc" property="fileDesc"/>
+<result column="file_url" property="fileUrl"/>
+<result column="file_pswd" property="filePswd"/>
+<result column="create_time" property="createTime"/>
+<result column="create_by" property="createBy"/>
+<result column="update_time" property="updateTime"/>
+<result column="update_by" property="updateBy"/>
+<result column="is_delete" property="isDelete"/>
+</resultMap>
+<!-- 查询文件夹 -->
+<select id="findFileType" resultMap="FileType">
+select * from file_type where is_delete=0
+</select>
+<!-- 新建文件夹 -->
+<insert id="addFolder" parameterType="FileType">
+insert into file_type(type_name,type_code,parent_id,grade,is_delete) values(#{typeName},#{typeCode},#{parentId},#{grade},0)
+</insert>
+<!-- 查询文件 -->
+<select id="findFiles" resultMap="Files">
+select * from files where is_delete=0
+</select>
+<!-- 添加文件数据 -->
+<insert id="addFiles" parameterType="Map">
+insert into files(file_type_id,file_name,file_desc,file_url,file_pswd,create_by,update_by,is_delete) 
+values(#{fileTypeId},#{files.fileName},#{files.fileDesc},#{files.fileUrl},
+<if test="files.filePswd!=null and files.filePswd!=''">MD5(#{files.filePswd}),</if>
+<if test="files.filePswd==null or files.filePswd==''">null,</if>
+#{userInfo.userId},#{userInfo.userId},0)
+</insert>
+<!-- 查询文件是否拥有密码 -->
+<select id="getMD5" parameterType="Files" resultMap="Files">
+select * from files where file_id=#{fileId} and is_delete=0
+</select>
+<!-- 查找文件夹下面的文件夹 -->
+<select id="findFileTypeById" parameterType="int" resultMap="FileType">
+select * from file_type where parent_id=#{id} and is_delete=0
+</select>
+<!-- 查找文件夹下面的含有密码文件 -->
+<select id="getFilesById" parameterType="int" resultMap="Files">
+select * from files where file_type_id=#{id} and file_desc is not null and is_delete=0
+</select> 
+<!-- 下载文件密码匹配 -->
+<select id="getPswd" parameterType="Files" resultType="int">
+select count(*) from files where file_pswd=MD5(#{fileType})
+</select>
+</mapper>

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.LogInfoMapper">
+	<resultMap type="LogInfo" id="LogInfoMap">
+		<id column="log_id" property="logId" />
+		<result column="ip_address" property="ipAddress" />
+		<result column="url" property="url" />
+		<result column="class_id" property="classId" />
+		<result column="proj_id" property="projId" />
+		<result column="log_type" property="logType" />
+		<result column="log_info" property="logInfo" />
+		<result column="exception" property="exception" />
+		<result column="create_time" property="createTime" />
+		<result column="create_by" property="createBy" />
+	</resultMap>
+	<!-- 查询日志总条数 -->
+	<select id="findLogInfoCount" parameterType="java.util.Map"
+		resultType="int">
+		SELECT COUNT(*) FROM log_info
+		<where>
+			<if test="projName!=null and projName!=''">
+				and `proj_id` in(
+				SELECT `proj_id` FROM `project_info`
+				WHERE
+				`proj_name` like "%"#{projName}"%"
+				)
+			</if>
+			<if test="logInfo.logInfo!=null and logInfo.logInfo!=''">
+				AND `log_info` like "%"#{logInfo.logInfo}"%"
+			</if>
+			<if test="logInfo.ipAddress!=null and logInfo.ipAddress!=''">
+				AND `ip_address` like "%"#{logInfo.ipAddress}"%"
+			</if>
+			<if test="userName!=null and userName!=''">
+				AND `create_by` in(
+				SELECT `user_id` FROM `user_info`
+				WHERE `user_name` like "%"#{userName}"%"
+				)
+			</if>
+			<if test="stateTime!=null and stateTime!=''">
+				AND (create_time &gt; #{stateTime}
+				or
+				create_time like
+				concat(#{stateTime},'%'))
+			</if>
+			<if test="endTime!=null and endTime!=''">
+				AND (create_time &lt; #{endTime}
+				or create_time like
+				concat(#{endTime},'%'))
+			</if>
+		</where>
+	</select>
+	<!-- 查询日志列表 分页查询 -->
+	<select id="findLogInfo" parameterType="java.util.Map"
+		resultMap="LogInfoMap">
+		SELECT * FROM `log_info`
+		<where>
+			<if test="projName!=null and projName!=''">
+				and `proj_id` in(
+				SELECT `proj_id` FROM `project_info`
+				WHERE `proj_name` like "%"#{projName}"%"
+				)
+			</if>
+			<if test="logInfo.logInfo!=null and logInfo.logInfo!=''">
+				AND `log_info` like "%"#{logInfo.logInfo}"%"
+			</if>
+			<if test="logInfo.ipAddress!=null and logInfo.ipAddress!=''">
+				AND `ip_address` like "%"#{logInfo.ipAddress}"%"
+			</if>
+			<if test="logInfo.exception!=null and logInfo.exception!=''">
+			    AND `exception` like "%"#{logInfo.exception}"%"
+			</if>
+			<if test="userName!=null and userName!=''">
+				AND `create_by` in(
+				SELECT `user_id` FROM `user_info`
+				WHERE `user_name` like "%"#{userName}"%"
+				)
+			</if>
+			<if test="stateTime!=null and stateTime!=''">
+				AND (create_time &gt; #{stateTime}
+				or
+				create_time like
+				concat(#{stateTime},'%'))
+			</if>
+			<if test="endTime!=null and endTime!=''">
+				AND (create_time &lt; #{endTime}
+				or create_time like
+				concat(#{endTime},'%'))
+			</if>
+		</where>
+		 ORDER BY create_time DESC 
+		<if test="export==null or export==''">
+			LIMIT #{page.pageIndex} , #{page.page}
+		</if>
+	</select>
+	<!-- 添加日志信息 -->
+	<insert id="insertLogInfo" parameterType="java.util.Map">
+		INSERT INTO
+		  log_info(`ip_address`,`url`,`class_id`,`proj_id`,`log_info`,`create_by`)
+		      VALUES(#{IP},#{url},1,#{projId},#{logInfo},#{userId})
+	</insert>
+	<!-- 根据用户名查询用户Id; -->
+	<select id="getUserIdByName" resultType="Integer" parameterType="UserInfo">
+		select user_id from user_info where user_code=#{userCode}
+	</select>
+	<!-- 动态查询logId -->
+	<select id="findLogIdBy" resultType="String" parameterType="java.util.Map">
+		SELECT group_concat(log_id) FROM `log_info`
+		<where>
+			<if test="projName!=null and projName!=''">
+				and `proj_id` in(
+				SELECT `proj_id` FROM `project_info`
+				WHERE `proj_name` like "%"#{projName}"%"
+				)
+			</if>
+			<if test="logInfo.logInfo!=null and logInfo.logInfo!=''">
+				AND `log_info` like "%"#{logInfo.logInfo}"%"
+			</if>
+			<if test="logInfo.ipAddress!=null and logInfo.ipAddress!=''">
+				AND `ip_address` like "%"#{logInfo.ipAddress}"%"
+			</if>
+			<if test="userName!=null and userName!=''">
+				AND `create_by` in(
+				SELECT `user_id` FROM `user_info`
+				WHERE `user_name` like "%"#{userName}"%"
+				)
+			</if>
+			<if test="stateTime!=null and stateTime!=''">
+				AND (create_time &gt; #{stateTime}
+				or
+				create_time like
+				concat(#{stateTime},'%'))
+			</if>
+			<if test="endTime!=null and endTime!=''">
+				AND (create_time &lt; #{endTime}
+				or create_time like
+				concat(#{endTime},'%'))
+			</if>
+		</where>
+	</select>
+	<!-- 通过用户code查询项目主键ID -->
+	<select id="getProjIdByUserCode" parameterType="UserInfo" resultType="String">
+		SELECT `proj_id` FROM `proj_team` WHERE `team_id` IN(
+		   SELECT `team_id` FROM `team_member` WHERE `user_id` IN(
+		       SELECT user_id FROM user_info WHERE user_name=#{userName}
+		)
+		)
+	</select>
+	<!-- 删除日志信息 -->
+	<delete id="deleteLogInfo" parameterType="String">
+		delete from log_info where log_id=#{logId}
+	</delete>
+</mapper>

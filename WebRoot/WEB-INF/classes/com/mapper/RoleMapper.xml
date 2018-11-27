@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.RoleMapper">
+
+	<resultMap id="ResultMap" type="Role">
+		<id column="role_id" property="roleId" />
+		<result column="role_name" property="roleName" />
+		<result column="role_desc" property="roleDesc" />
+		<result column="role_code" property="roleCode" />
+		<result column="role_state" property="roleState" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<!-- 根据条件查询所有角色 信息 -->
+	<select id="findRoleAll" resultMap="ResultMap" parameterType="HashMap">
+		select * from role
+		<where>
+			<if test="role.roleName!=null and role.roleName!=''">
+				and role_name like "%"#{role.roleName}"%"
+			</if>
+			<if test="role.roleState!=null and role.roleState!=''">
+				and role_state=#{role.roleState}
+			</if>
+			<if test="role.createTime!=null and role.createTime!=''">
+				and create_time &gt; #{role.createTime} or create_time
+				like
+				"%"#{role.createTime}"%"
+			</if>
+			<if test="createTime2!=null and createTime2!=''">
+				and create_time &lt; #{createTime2} or create_time like
+				"%"#{createTime2}"%"
+			</if>
+		</where>
+		order by update_time desc limit #{pageBean.pageIndex},#{pageBean.page}
+	</select>
+
+	<!-- 查询角色条数 -->
+	<select id="countRoleAll" parameterType="HashMap" resultType="Integer">
+		select count(*) from role
+		<where>
+			<if test="role.roleName!=null and role.roleName!=''">
+				and role_name like "%"#{role.roleName}"%"
+			</if>
+
+			<if test="role.roleState!=null and role.roleState!=''">
+				and role_state=#{role.roleState}
+			</if>
+
+			<if test="role.createTime!=null and role.createTime!=''">
+				and create_time &gt; #{role.createTime} or create_time
+				like
+				"%"#{role.createTime}"%"
+			</if>
+
+			<if test="createTime2!=null and createTime2!=''">
+				and create_time &lt; #{createTime2} or create_time like
+				"%"#{createTime2}"%"
+			</if>
+
+		</where>
+
+	</select>
+
+	<!-- 根据角色ID查询对应角色信息 -->
+
+
+	<select id="findRoleById" resultMap="ResultMap" parameterType="Role">
+		select * from role where role_id=#{roleId}
+	</select>
+
+	<!-- 更新角色信息 -->
+
+
+	<update id="refushRole" parameterType="Role"> update role set
+		role_name=#{roleName},role_desc=#{roleDesc} where
+		role_code=#{roleCode}
+	</update>
+
+	<!-- 新增角色信息 -->
+
+
+	<insert id="addRole" parameterType="Role">
+	 insert into role(role_name,role_desc,role_code)
+		values(#{roleName},#{roleDesc},#{roleCode})
+	</insert>
+
+	<!-- 根据roleCode查询角色表是否有重复的 -->
+
+
+	<select id="findRoleByCode" resultMap="ResultMap" parameterType="Role">
+		select * from role where role_code=#{roleCode} or
+		role_name=#{roleName}
+	</select>
+
+	<!-- 启用、禁用角色 -->
+
+
+	<update id="restart" parameterType="Role"> 
+	update role set
+		role_state=#{roleState} where role_id=#{roleId}
+	</update>
+
+	<!-- 根据角色id查询当前角色绑定权限 -->
+
+	<select id="selectRoleById" parameterType="Role" resultType="String">
+	SELECT GROUP_CONCAT(`auth_id`) FROM ROLE_AUTH
+	WHERE role_id=#{roleId}
+	</select>
+	
+
+</mapper>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.RecycleMapper">
+	<!--回收站列表映射 -->
+	<resultMap type="Recycle" id="RecycleMap">
+		<id column="recy_Id" property="recyId" />
+		<result column="db_User" property="dbUser" />
+		<result column="class_Id" property="classId" />
+		<result column="intro" property="intro" />
+		<result column="table_Name" property="tableName" />
+		<result column="key_Name" property="keyName" />
+		<result column="create_Time" property="createTime" />
+		<result column="key_Value" property="keyValue" />
+		<result column="create_By" property="createBy" />
+		<result column="proj_Name" property="projName" />
+		<result column="class_Name" property="className" />
+	</resultMap>
+	<!--项目基本信息表映射 -->
+	<resultMap type="ProjectInfo" id="projectInfoMap">
+		<id column="proj_Id" property="projId" />
+		<result column="class_Id" property="classId" />
+		<result column="proj_Name" property="projName" />
+		<result column="proj_Num" property="projNum" />
+		<result column="proj_Desc" property="projDesc" />
+		<result column="vistor_Type" property="vistorType" />
+		<result column="create_Time" property="createTime" />
+		<result column="create_By" property="createBy" />
+		<result column="start_Time" property="startTime" />
+		<result column="end_Time" property="endTime" />
+		<result column="able_Day" property="ableDay" />
+		<result column="proj_State" property="projState" />
+		<result column="proj_Chief" property="projChief" />
+		<result column="remark" property="remark" />
+	</resultMap>
+	<!--系统分类表映射 -->
+	<resultMap type="SysClass" id="SyClassMap">
+		<id column="class_Id" property="classId" />
+		<result column="class_Name" property="className" />
+		<result column="parent_Id" property="parentId" />
+		<result column="class_Desc" property="classDesc" />
+		<result column="sys-Type" property="sysType" />
+		<result column="grade" property="grade" />
+		<result column="class_Code" property="classCode" />
+	</resultMap>
+	
+	<!-- 资源文件类型 -->
+	<resultMap type="FileType" id="FileType">
+	<id column="file_type_id" property="fileTypeId"/>
+	<result column="type_name" property="typeName"/>
+	<result column="type_code" property="typeCode"/>
+	<result column="parent_id" property="parentId"/>
+	<result column="grade" property="grade"/>
+	</resultMap>
+
+
+	<!-- 查询回收站总条数 -->
+	<select id="getCount" resultType="int" parameterType="java.util.HashMap">
+
+		<!-- (SELECT count(0) FROM `recycle` r, (SELECT `class_name`, `class_id` 
+			FROM `sys_class` ) c, (SELECT `proj_name` , `class_id` FROM`project_info`) 
+			p WHERE r.`class_id` = c.`class_id` = p.`class_id`) -->
+		SELECT count(0) FROM `recycle`
+		<where>
+			<if test="recycle.projName!=null and recycle.projName!=''">
+				and class_id IN (SELECT class_id FROM `sys_class` WHERE
+				class_id IN
+				(SELECT class_id FROM`project_info` WHERE `proj_name` LIKE '%${recycle.projName}%') AND
+				`sys_type`='2')
+			</if>
+			<if test="recycle.className!=null and recycle.className!=''">
+				and class_id IN(SELECT class_Id FROM sys_class WHERE
+				class_name LIKE '%${recycle.className}%' AND
+				`sys_type`='3')
+			</if>
+			<if test="recycle.intro!=null and recycle.intro!=''">
+				and intro LIKE '%${recycle.intro}%'
+			</if>
+			<if test="beginTime!=null and beginTime!=''">
+				and (create_time &gt; #{beginTime} or create_time like
+				concat(#{beginTime}'%'))
+			</if>
+			<if test="endTime!=null and endTime!=''">
+				and (create_time &lt; #{endTime} or create_time like
+				concat(#{endTime}'%'))
+			</if>
+		</where>
+
+	</select>
+	<!-- 回收站分页查询 -->
+	<select id="getRecycles" resultMap="RecycleMap" parameterType="java.util.HashMap">
+		SELECT * from recycle
+		<where>
+			<if test="recycle.projName!=null and recycle.projName!=''">
+				and class_id IN (SELECT class_id FROM `sys_class` WHERE
+				class_id IN
+				(SELECT class_id FROM`project_info` WHERE `proj_name` LIKE '%${recycle.projName}%') AND
+				`sys_type`='2')
+
+			</if>
+			<if test="recycle.className!=null and recycle.className!=''">
+				and class_id IN(SELECT class_Id FROM sys_class WHERE
+				class_name LIKE '%${recycle.className}%' AND
+				`sys_type`='3')
+			</if>
+			<if test="recycle.intro!=null and recycle.intro!=''">
+				and intro LIKE '%${recycle.intro}%'
+			</if>
+			<if test="beginTime!=null and beginTime!=''">
+				and (create_time &gt; #{beginTime} or create_time like
+				concat(#{beginTime}'%'))
+			</if>
+			<if test="endTime!=null and endTime!=''">
+				and (create_time &lt; #{endTime} or create_time like
+				concat(#{endTime}'%'))
+			</if>
+		</where>
+		ORDER BY create_time DESC
+		LIMIT #{page.pageIndex} , #{page.page}
+	</select>
+	<!--公用删除接口（描述、模块id、表名称、主键key、主键value） -->
+	 <update id="delToRecycle" parameterType="Recycle">
+	UPDATE ${tableName} set is_delete='1' where ${keyName}=${keyValue}
+	</update>
+	<!-- 添加至回收站  -->
+	<insert id="addRecycle" parameterType="Recycle">
+	INSERT INTO recycle(intro,class_id,table_name,key_name,key_value)VALUES(#{intro},#{classId},#{tableName},#{keyName},#{keyValue})
+	</insert> 
+	<!-- 回收站还原,改变删除状态 -->
+	<update id="rollbackDelete" parameterType="Recycle">
+	UPDATE ${tableName} set is_delete='0' where ${keyName}=${keyValue}
+	</update>
+	<!-- 回收站还原,同时删除回收站中数据 -->
+	<delete id="rollbackRecycle" parameterType="Recycle">
+	DELETE  FROM `recycle` WHERE  `table_name`=#{tableName} AND `key_name`=#{keyName} AND `key_value`=#{keyValue}
+	</delete>
+	<!-- 数据的删除(物理删除)删除回收站中数据 -->
+	<delete id="delRecycleById" parameterType="Recycle">
+	delete from recycle where recy_id =#{recyId}
+	</delete>
+	<!--数据的删除(物理删除)（表名称、主键key、主键value），删除其它表数据  -->
+	<delete id="delOhterTable" parameterType="Recycle">
+	delete from ${tableName} where ${keyName}=${keyValue}
+	</delete>
+	<!-- 查询文件路径 -->
+	<select id="getFileAdress" parameterType="Recycle" resultType="String">
+	select file_url from files where ${keyName}=${keyValue}
+	</select>
+	<!-- 查询文件夹信息 -->
+	<select id="getFileType" parameterType="int" resultMap="FileType">
+	select * from file_type where file_type_id=#{fileTypeId}
+	</select>
+</mapper>

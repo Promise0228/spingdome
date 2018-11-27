@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.TestExampMapper">
+	<resultMap id="TestExampMap" type="TestExamp">
+		<id column="test_id" property="testId" />
+		<result column="proj_id" property="projId" />
+		<result column="test_type" property="testType" />
+		<result column="test_title" property="testTitle" />
+		<result column="test_desc" property="testDesc" />
+		<result column="result" property="result" />
+		<result column="executor" property="executor" />
+		<result column="file_url" property="fileUrl" />
+		<result column="create_time" property="createTime" />
+		<result column="create_by" property="createBy" />
+		<result column="start_time" property="startTime" />
+		<result column="end_time" property="endTime" />
+		<result column="test_state" property="testState" />
+		<result column="is_delete" property="isDelete" />
+		<result column="proj_Name" property="projName" />
+	</resultMap>
+	
+	<resultMap type="UserInfo" id="UserInfoMap">
+		<id column="user_id" property="userId" />
+		<result column="user_name" property="userName" />
+		<result column="group_id" property="groupId" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="is_delect" property="isDelect" />
+		<result column="nick_name" property="nickName" />
+		<result column="user_code" property="userCode" />
+		<result column="user_pwd" property="userPwd" />
+		<result column="user_type" property="userType" />
+		<result column="user_state" property="userState" />
+
+	</resultMap>
+	<!-- 查询测试用例表总条数 -->
+	<select id="getCount" resultType="int" parameterType="java.util.HashMap">
+		SELECT count(0) FROM test_examp
+		<where>
+			is_delete=0 and GET_TESTEXAMPLE(#{user.userId},proj_id)
+			<if test="testExamp.projName!=null and testExamp.projName!=''">
+				and `proj_id`=(SELECT `proj_id` FROM `project_info` WHERE
+				`proj_name`
+				LIKE "%${testExamp.projName}%")
+			</if>
+			<if test="testExamp.testType!=null and testExamp.testType!=''">
+				and test_type like "%"#{testExamp.testType}"%"
+			</if>
+			<if test="testExamp.testDesc!=null and testExamp.testDesc!=''">
+				and test_desc like "%"#{testExamp.testDesc}"%"
+			</if>
+			<if test="testExamp.result!=null and testExamp.result!=''">
+				and result=#{testExamp.result}
+			</if>
+			<if test="testExamp.startTime!=null and testExamp.startTime!=''">
+				and (start_time &gt; #{testExamp.startTime} or start_time
+				like
+				concat(#{testExamp.startTime}'%'))
+			</if>
+			<if test="testExamp.endTime!=null and testExamp.endTime!=''">
+				and (end_time &lt; #{testExamp.endTime} or end_time like
+				concat(#{testExamp.endTime}'%'))
+			</if>
+		</where>
+	</select>
+	<!-- 测试用例表分页查询 -->
+	<select id="getTestExamps" resultMap="TestExampMap"
+		parameterType="java.util.HashMap">
+		SELECT * from test_examp
+		<where>
+			is_delete=0 and GET_TESTEXAMPLE(#{user.userId},proj_id)
+			<if test="testExamp.projName!=null and testExamp.projName!=''">
+				and `proj_id`=(SELECT `proj_id` FROM `project_info` WHERE
+				`proj_name`
+				LIKE '%${testExamp.projName}%')
+			</if>
+			<if test="testExamp.testType!=null and testExamp.testType!=''">
+				and test_type like "%"#{testExamp.testType}"%"
+			</if>
+			<if test="testExamp.testDesc!=null and testExamp.testDesc!=''">
+				and test_desc like "%"#{testExamp.testDesc}"%"
+			</if>
+			<if test="testExamp.testState!=null and testExamp.testState!=''">
+				and test_State=#{testExamp.testState}
+			</if>
+			<if test="testExamp.startTime!=null and testExamp.startTime!=''">
+				and (start_time &gt; #{testExamp.startTime} or start_time
+				like
+				concat(#{testExamp.startTime}'%'))
+			</if>
+			<if test="testExamp.endTime!=null and testExamp.endTime!=''">
+				and (end_time &lt; #{testExamp.endTime} or end_time like
+				concat(#{testExamp.endTime}'%'))
+			</if>
+		</where>
+
+		LIMIT #{page.pageIndex} , #{page.page}
+	</select>
+	
+	
+	
+	<select id="findTestUser" parameterType="ProjectInfo" resultMap="UserInfoMap">
+	select * from user_info where user_id in(
+	select user_id from team_member where team_id in(
+	select  team_id from proj_team where proj_id = #{projId}
+	)
+	union (select user_id from project_info where proj_id =#{projId})
+	union (select proj_chief from proj_team where proj_id =#{projId})
+	)
+	</select>
+	
+	<!-- 添加测试用例 -->
+	<insert id="addTestExamp" parameterType="java.util.HashMap">
+	insert into test_examp(
+	proj_id,test_type,test_title,start_time,end_time,test_desc,create_by,create_time,test_state,result)
+	values(#{testExamp.projId},#{testExamp.testType},#{testExamp.testTitle},#{testExamp.startTime}
+	,#{testExamp.endTime},#{testExamp.testDesc},#{user.userId},now(),'0','0')
+	</insert>
+
+	<!-- 修改测试用例 -->
+	<update id="updateTestExamp" parameterType="TestExamp" >
+	update test_examp set 
+	end_time=#{endTime},result=#{result},test_state=#{testState}
+	where test_id = #{testId}
+	</update>
+	
+	<!-- 根据用户名模糊查询对应项目组成员 -->
+	<select id="findExecutors" parameterType="java.util.HashMap" resultMap="UserInfoMap">
+	select * from user_info 
+	where user_name like "%"#{user.userName}"%" 
+	and user_id in(select user_id from team_member where team_id in (
+	select team_id from proj_team where proj_id = #{proj.projId} 
+	))
+	</select>
+	
+	<!-- 根据用户名查询用户 -->
+	<select id="getUserByName" parameterType="UserInfo" resultMap="UserInfoMap">
+		select * from user_info where user_name = #{userName}
+	</select>
+	
+	<!-- 设置执行人 -->
+	<update id="updateExecutor" parameterType="java.util.HashMap">
+	update test_examp set executor = #{user.userId} where test_id = #{testExamp.testId}
+	</update>
+</mapper>

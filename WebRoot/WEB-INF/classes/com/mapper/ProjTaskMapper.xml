@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.ProjTaskMapper">
+	<resultMap id="UserInfo" type="UserInfo">
+		<id column="user_id" property="userId" />
+		<result column="group_id" property="groupId" />
+		<result column="user_name" property="userName" />
+		<result column="nick_name" property="nickName" />
+		<result column="user_code" property="userCode" />
+		<result column="user_pwd" property="userPwd" />
+		<result column="user_type" property="userType" />
+		<result column="user_state" property="userState" />
+		<result column="is_delete" property="isDelete" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	<resultMap type="ProjTask" id="ProjTask">
+		<id column="task_id" property="taskId" />
+		<result column="able_day" property="ableDay" />
+		<result column="class_id" property="classId" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="end_time" property="endTime" />
+		<result column="excutor" property="excutor" />
+		<result column="finish_time" property="finishTime" />
+		<result column="is_delete" property="isDelete" />
+		<result column="plan_time" property="planTime" />
+		<result column="process" property="process" />
+		<result column="proj_id" property="projId" />
+		<result column="remark" property="remark" />
+		<result column="start_time" property="startTime" />
+		<result column="task_desc" property="taskDesc" />
+		<result column="task_name" property="taskName" />
+		<result column="task_state" property="taskState" />
+	</resultMap>
+	<resultMap type="SysClass" id="SysClass">
+		<id column="class_id" property="classId" />
+		<result column="class_code" property="classCode" />
+		<result column="class_desc" property="classDesc" />
+		<result column="class_name" property="className" />
+		<result column="grade" property="grade" />
+		<result column="parent_id" property="parentId" />
+		<result column="sys_type" property="sysType" />
+	</resultMap>
+	<!-- 获取任务条数 -->
+	<select id="getCount" resultType="int" parameterType="java.util.HashMap">
+		<!-- supper_manage -->
+			SELECT count(0) FROM `proj_task` where is_delete = '0' and
+			1=1 
+		<!-- PM -->
+		<if test="rolecode=='PM'">
+			 and
+			`excutor` IN (
+			SELECT `user_id` FROM `team_member` WHERE
+			`team_id` IN(
+			SELECT `team_id` FROM `proj_team` WHERE `proj_id` in (
+			SELECT `proj_id` FROM `project_info` WHERE `proj_chief` =
+			#{userid})))
+			 OR `create_by` = #{userid} 
+		</if>
+		<!-- PL,TL -->
+		<if test="rolecode=='PL' or rolecode=='TL'">
+			and
+			`excutor` IN (
+			SELECT `user_id` FROM `team_member` WHERE
+			`team_id` IN(
+			SELECT `team_id` FROM `proj_team` pt , `project_info` p
+			WHERE pt.`proj_id`= p.`proj_id` AND pt.`proj_chief` = 1 ))
+			 OR `create_by` = #{userid} 
+		</if>
+		<!-- PE,TM -->
+		<if test="rolecode=='PE' or rolecode=='TM'">
+			and `excutor` =
+			#{userid}
+			OR `create_by` = #{userid}
+		</if>
+		<if test="projTask.projId!=null and projTask.projId!=''">
+			AND `proj_id` = #{projTask.projId}
+		</if>
+		<if test="projTask.classId!=null and projTask.classId!=''">
+			AND `class_id`= #{projTask.classId}
+		</if>
+		<if test="projTask.taskName!=null and projTask.taskName!=''">
+			AND `task_name` like '%${projTask.taskName}%'
+		</if>
+		<if test="excutor!=null and excutor!=''">
+			AND `excutor` = #{excutor}
+		</if>
+		<if test="begintime!=null and begintime!=''">
+			<![CDATA[   and DATE_FORMAT(`create_time`, '%Y-%m-%d')>=  DATE_FORMAT(#{begintime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="endtime!=null and endtime!=''">
+			<![CDATA[   and DATE_FORMAT(`create_time`, '%Y-%m-%d')<=  DATE_FORMAT(#{endtime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="outtime!=null and outtime!=''">
+			<![CDATA[   and DATE_FORMAT(`end_time`, '%Y-%m-%d')<=  DATE_FORMAT(#{outtime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="time!=null and time!=''">
+			<![CDATA[   and DATE_FORMAT(`end_time`, '%Y-%m-%d')>  DATE_FORMAT(#{time}, '%Y-%m-%d')   ]]>
+		</if>
+	</select>
+	<!-- 分页,条件查询任务信息[数据权限] -->
+	<select id="getAllProjTaskByCon" resultMap="ProjTask"
+		parameterType="java.util.HashMap">
+		<!-- supper_manage -->
+			SELECT * FROM `proj_task` where is_delete = '0' and 1=1
+		<!-- PM -->
+		<if test="rolecode=='PM'">
+			and `excutor` IN (
+			SELECT `user_id` FROM `team_member` WHERE `team_id`
+			IN(
+			SELECT `team_id` FROM `proj_team` WHERE `proj_id` in (
+			SELECT
+			`proj_id` FROM `project_info` WHERE `proj_chief` = #{userid})))
+			OR
+			`create_by` = #{userid}
+		</if>
+		<!-- PL,TL -->
+		<if test="rolecode=='PL' or rolecode=='TL'">
+			and `excutor` IN (
+			SELECT `user_id` FROM `team_member` WHERE `team_id`
+			IN(
+			SELECT `team_id` FROM `proj_team` pt , `project_info` p
+			WHERE
+			pt.`proj_id`= p.`proj_id` AND pt.`proj_chief` = 1 ))
+			OR `create_by` =
+			#{userid}
+		</if>
+		<!-- PE,TM -->
+		<if test="rolecode=='PE' or rolecode=='TM'">
+			 and
+			`excutor` =
+			#{userid}
+			OR `create_by` = #{userid}
+		</if>
+		<if test="projTask.projId!=null and projTask.projId!=''">
+			AND `proj_id` = #{projTask.projId}
+		</if>
+		<if test="projTask.classId!=null and projTask.classId!=''">
+			AND `class_id`= #{projTask.classId}
+		</if>
+		<if test="projTask.taskName!=null and projTask.taskName!=''">
+			AND `task_name` like '%${projTask.taskName}%'
+		</if>
+		<if test="excutor!=null and excutor!=''">
+			AND `excutor` = #{excutor}
+		</if>
+		<if test="begintime!=null and begintime!=''">
+			<![CDATA[   and DATE_FORMAT(`create_time`, '%Y-%m-%d')>=  DATE_FORMAT(#{begintime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="endtime!=null and endtime!=''">
+			<![CDATA[   and DATE_FORMAT(`create_time`, '%Y-%m-%d')<=  DATE_FORMAT(#{endtime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="outtime!=null and outtime!=''">
+			<![CDATA[   and DATE_FORMAT(`end_time`, '%Y-%m-%d')<=  DATE_FORMAT(#{outtime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="time!=null and time!=''">
+			<![CDATA[   and DATE_FORMAT(`end_time`, '%Y-%m-%d')>  DATE_FORMAT(#{time}, '%Y-%m-%d')   ]]>
+		</if>
+		LIMIT #{page.pageIndex} , #{page.page}
+	</select>
+	<!-- 添加任务信息 -->
+	<insert id="addProjTask" parameterType="java.util.HashMap">
+		INSERT INTO
+		`proj_task`(`proj_id`,`task_name`,`task_desc`,`excutor`,`create_by`,`class_id`,`able_day`,`start_time`,`end_time`,`plan_time`,`remark`)
+		VALUES(#{projTask.projId},#{projTask.taskName},#{projTask.taskDesc},#{projTask.excutor},#{userid},#{projTask.classId},#{projTask.ableDay},#{projTask.startTime},#{projTask.endTime},#{projTask.planTime},#{projTask.remark})
+	</insert>
+	<!-- 根据任务id获取修改任务信息 -->
+	<select id="getUpdProjTask" parameterType="ProjTask" resultMap="ProjTask">
+		select * from proj_task where task_id = #{taskId}
+	</select>
+	<!-- 获取任务状态 -->
+	<select id="getAlltaskState1" resultMap="SysClass"
+		parameterType="int">
+		SELECT * FROM `sys_class` WHERE `class_id` =
+		(SELECT
+		`class_id` FROM `project_info` WHERE `proj_id` = #{id})
+	</select>
+	
+	<select id="getAlltaskState11" resultMap="SysClass"
+		parameterType="int">
+		SELECT * FROM proj_task
+	</select>
+	<!-- 修改任务信息 -->
+	<update id="updateProjTask" parameterType="ProjTask">
+		UPDATE `proj_task` SET
+		`finish_time`=#{finishTime},
+		`process`=#{process},`remark`=#{remark},`task_state`=#{taskState}
+		where task_id = #{taskId}
+	</update>
+	<!-- 根据任务id获取修改任务信息 -->
+	<select id="getDealProjTask" parameterType="ProjTask" resultMap="ProjTask">
+		select * from proj_task where task_id = #{taskId}
+	</select>
+	<!-- 删除任务 -->
+	<update id="delProjTask" parameterType="ProjTask">
+		UPDATE `proj_task` SET
+		`is_delete`= '1' WHERE `task_id` = #{taskId}
+	</update>
+	<!-- 查询所以项目类型 项目 -->
+	<select id="findAllproj" resultMap="SysClass">
+		SELECT * FROM `sys_class`
+		WHERE `grade` = 1
+	</select>
+	<!-- 查询所有模块类型的模块 -->
+	<select id="findAllprojMK" resultMap="SysClass">
+		SELECT * FROM `sys_class`
+		WHERE `grade` = 2
+	</select>
+	<!-- 查询所有用户信息 -->
+	<select id="findAllUser" resultMap="UserInfo">
+		select * from `user_info`
+	</select>
+	<!-- 获取快过期任务 -->
+	<select id="getOutTimeCount" resultType="int" parameterType="java.util.HashMap">
+		<!-- supper_manage -->
+			SELECT count(0) FROM `proj_task` where is_delete = '0' and
+			1=1 
+		<!-- PM -->
+		<if test="rolecode=='PM'">
+			and
+			`excutor` IN (
+			SELECT `user_id` FROM `team_member` WHERE
+			`team_id` IN(
+			SELECT `team_id` FROM `proj_team` WHERE `proj_id` in (
+			SELECT `proj_id` FROM `project_info` WHERE `proj_chief` =
+			#{userid})))
+			<!-- OR `create_by` = #{userid} -->
+		</if>
+		<!-- PL,TL -->
+		<if test="rolecode=='PL' or rolecode=='TL'">
+			and`excutor` IN (
+			SELECT `user_id` FROM `team_member`
+			WHERE`team_id` IN(
+			SELECT `team_id` FROM `proj_team` pt ,
+			`project_info` p
+			WHERE pt.`proj_id`= p.`proj_id` AND pt.`proj_chief` =
+			1 ))
+			 OR `create_by` = #{userid} 
+		</if>
+		<!-- PE,TM -->
+		<if test="rolecode=='PE' or rolecode=='TM'">
+			and `excutor` =
+			#{userid}
+			 OR `create_by` = #{userid} 
+		</if>
+		<if test="outtime!=null and outtime!=''">
+			<![CDATA[   and DATE_FORMAT(`end_time`, '%Y-%m-%d')<=  DATE_FORMAT(#{outtime}, '%Y-%m-%d')   ]]>
+		</if>
+		<if test="time!=null and time!=''">
+			<![CDATA[   and DATE_FORMAT(`end_time`, '%Y-%m-%d')>  DATE_FORMAT(#{time}, '%Y-%m-%d')   ]]>
+		</if>
+	</select>
+	<!-- 获取当前用户的身份 -->
+	<select id="getRoleCode" parameterType="int" resultType="String">
+		SELECT
+		`role_code` FROM `role` r , `user_role` ur
+		WHERE r.`role_id` =
+		ur.`role_id` AND ur.`user_id` = #{userid}
+	</select>
+	<select id="getUid" parameterType="String" resultType="Integer">
+	select user_id from user_info where user_code = #{usercode}
+	</select>
+</mapper>

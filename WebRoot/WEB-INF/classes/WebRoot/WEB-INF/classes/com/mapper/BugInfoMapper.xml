@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.BugInfoMapper">
+<resultMap type="BugInfo" id="BugInfo">
+<id column="bug_id" property="bugId"/>
+<result column="proj_id" property="projId"/>
+<result column="class_id" property="classId"/>
+<result column="bug_title" property="bugTitle"/>
+<result column="bug_num" property="bugNum"/>
+<result column="bug_desc" property="bugDesc"/>
+<result column="bug_state" property="bugState"/>
+<result column="bug_level" property="bugLevel"/>
+<result column="create_time" property="createTime"/>
+<result column="create_by" property="createBy"/>
+<result column="update_by" property="updateBy"/>
+<result column="is_delete" property="isDelete"/>
+<result column="file_url" property="fileUrl"/>
+</resultMap>
+<!-- 根据权限查询bug -->
+<select id="findBug" resultMap="BugInfo" parameterType="map">
+select * ,`FN_BUGINFO`(`update_by`) as updateBys,
+`fns_buginfo`(`proj_id`) as projIds,
+`fn_class`(`class_id`) as classIds from (select * from bug_info as BugInfo
+<where>
+<if test="roleCodes.roleCode=='supper_manage'">            
+and is_delete=0
+</if>
+<if test="roleCodes.roleCode=='PM'">
+and proj_id in(select proj_id from project_info where proj_chief=#{user.userId}) and is_delete=0
+</if>
+<if test="roleCodes.roleCode=='PL' or roleCodes.roleCode=='TL'">
+and is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE proj_chief =#{user.userId})
+</if>
+<if test="roleCodes.roleCode=='TM'">
+<!-- and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId})) -->
+ and create_by=#{user.userId}
+</if>
+<if test="roleCodes.roleCode=='PE'">
+ <!-- class_id = (SELECT class_id FROM project_info WHERE proj_id=(SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))) AND is_delete=0
+ AND proj_id=
+ 从项目组表查出项目id
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ 从成员表中查出项目组id
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId})) -->
+  AND update_by=#{user.userId}
+</if>
+
+</where>) as BugInfos
+<!-- 条件查询 -->
+<where>
+    <!-- 根据用户名查询 -->
+	<if test="bug.bugTitle!=null and  bug.bugTitle!=''">
+	and
+	bug_title like "%"#{bug.bugTitle}"%"
+	</if>
+	<!-- 根据执行人查询 -->
+	<if test="updateBys1!=null and  updateBys1!=''">
+	and
+	update_by in (#{updateBys1})
+	</if>
+	<!-- 根据bug状态查询 -->
+	<if test="bug.bugState!=null and bug.bugState!=''">
+	and bug_state =#{bug.bugState}
+	</if>
+	<!-- 根据bug级别查询 -->
+	<if test="bug.bugLevel!=null and bug.bugLevel!=''">
+	and bug_level =#{bug.bugLevel}
+	</if>
+	<!-- 根据bug所属项目 -->
+	<if test="projids!=null and projids!=''">
+	and proj_id in (#{projids})
+	</if>
+	<!-- 根据bug所属模块 -->
+	<if test="classids!=null and classids!=''">
+	and class_id in ({classids})
+	</if>
+	<if test="bug.createTime!=null and bug.createTime!=''">
+	and (create_time &gt; #{bug.createTime}
+	or
+	create_time like concat(#{bug.createTime},'%'))
+	</if>
+	<if test="bug.createTime1!=null and bug.createTime1!=''">
+	and (create_time &lt; #{createTime1}
+	or create_time like
+	concat(#{createTime1},'%'))
+	</if>
+	</where>
+	order by create_time desc
+	<if test="imports==null or imports==''">
+	limit #{pageBean.pageIndex},#{pageBean.page}
+	</if>
+
+ 
+
+<!-- SELECT *,`FN_BUGINFO`(`update_by`) as updateBys,
+`fns_buginfo`(`proj_id`) as projIds,
+`fn_class`(`class_id`) as classIds 
+FROM `bug_info` WHERE is_delete=0 -->
+</select>
+
+<!-- 根据权限查询bug总数 -->
+<select id="findBugSum" parameterType="map" resultType="Integer">
+select COUNT(*) from (select * from bug_info as BugInfo
+<where>
+<if test="roleCodes.roleCode=='supper_manage'">            
+and is_delete=0
+</if>
+<if test="roleCodes.roleCode=='PM'">
+and proj_id in(select proj_id from project_info where proj_chief=#{user.userId}) and is_delete=0
+</if>
+<if test="roleCodes.roleCode=='PL' or roleCodes.roleCode=='TL'">
+and is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE proj_chief =#{user.userId})
+</if>
+<if test="roleCodes.roleCode=='TM'">
+<!-- and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId})) -->
+ and create_by=#{user.userId}
+</if>
+<if test="roleCodes.roleCode=='PE'">
+ <!-- class_id = (SELECT class_id FROM project_info WHERE proj_id=(SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))) AND is_delete=0
+ AND proj_id=
+ 从项目组表查出项目id
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ 从成员表中查出项目组id
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId})) -->
+  AND update_by=#{user.userId}
+</if>
+</where>) as BugInfos
+<!-- 条件查询 -->
+<where>
+    <!-- 根据用户名查询 -->
+	<if test="bug.bugTitle!=null and  bug.bugTitle!=''">
+	and
+	bug_title like "%"#{bug.bugTitle}"%"
+	</if>
+	<!-- 根据执行人查询 -->
+	<if test="updateBys!=null and  updateBys!=''">
+	and
+	update_by in (#{updateBys})
+	</if>
+	<!-- 根据bug状态查询 -->
+	<if test="bug.bugState!=null and bug.bugState!=''">
+	and bug_state =#{bug.bugState}
+	</if>
+	<!-- 根据bug级别查询 -->
+	<if test="bug.bugLevel!=null and bug.bugLevel!=''">
+	and bug_level =#{bug.bugLevel}
+	</if>
+	<!-- 根据bug所属项目 -->
+	<if test="projIds!=null and projId!=''">
+	and proj_id in (#{projIds})
+	</if>
+	<!-- 根据bug所属模块 -->
+	<if test="classIds!=null and classIds!=''">
+	and class_id in ({classIds})
+	</if>
+	<if test="bug.createTime!=null and bug.createTime!=''">
+	and (create_time &gt; #{bug.createTime}
+	or
+	create_time like concat(#{bug.createTime},'%'))
+	</if>
+	<if test="bug.createTime1!=null and bug.createTime1!=''">
+	and (create_time &lt; #{createTime1}
+	or create_time like
+	concat(#{createTime1},'%'))
+	</if>
+	</where>
+	
+
+ 
+
+
+<!-- SELECT *,`FN_BUGINFO`(`update_by`) as updateBys,
+`fns_buginfo`(`proj_id`) as projIds,
+`fn_class`(`class_id`) as classIds 
+FROM `bug_info` WHERE is_delete=0 -->
+</select>
+
+<!-- 查询所有测试组 -->
+<select id="findTest" resultType="String">
+SELECT GROUP_CONCAT(team_code) FROM proj_team WHERE team_code LIKE "test%"
+</select>
+<!-- 根据userid查询角色id -->
+<select id="getRoleIdByUserInfo" parameterType="UserInfo" resultType="Role">
+select role_code roleCode from role where role_id=(select role_Id from user_role where user_id=#{userId})
+</select>
+<!-- 根据userid查询用户所在项目组 -->
+<select id="getProjTeamByUserId" parameterType="UserInfo" resultType="ProjTeam">
+select team_code teamCode from proj_team where team_id=
+(select team_id from team_member where user_id=#{userId})
+</select>
+<!-- 查询所有项目 -->
+<select id="selectProjectName" resultType="ProjectInfo">
+select proj_name projName,proj_num projNum from project_info
+</select>
+<!-- 查询所有的模块 -->
+<select id="selectClassId" resultType="SysClass">
+select class_id classId,class_name className from sys_class
+</select>
+<!-- bug标号唯一效验 -->
+<select id="findBugInfoByBugNumber" resultMap="BugInfo" parameterType="BugInfo">
+select * from bug_info where bug_num=#{bugNum}
+</select>
+<!-- 添加bug -->
+<insert id="addBug" parameterType="BugInfo">
+insert into bug_info(proj_id,class_id,bug_title,bug_num,bug_desc,bug_level,create_by)
+ values (#{projId},#{classId},#{bugTitle},#{bugNum},#{bugDesc},#{bugLevel},#{createBy})
+</insert>
+<!-- 删除bug -->
+<update id="delBug" parameterType="BugInfo">
+update bug_info set is_delete=1 where bug_num=#{bugNum}
+</update>
+<!-- 禁用bug -->
+<update id="updateForbidBug" parameterType="BugInfo">
+update bug_info set bug_state=0 where bug_num=#{bugNum}
+</update>
+<!-- 启动bug -->
+<update id="updateStartBug" parameterType="BugInfo">
+update bug_info set bug_state=1 where bug_num=#{bugNum}
+</update>
+<resultMap id="userInfo" type="UserInfo">
+		<id column="user_id" property="userId" />
+		<result column="group_id" property="groupId" />
+		<result column="user_name" property="userName" />
+		<result column="nick_name" property="nickName" />
+		<result column="user_code" property="userCode" />
+		<result column="user_pwd" property="userPwd" />
+		<result column="user_type" property="userType" />
+		<result column="user_state" property="userState" />
+		<result column="is_delete" property="isDelete" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+<resultMap id="projTeam" type="ProjTeam">
+<id column="team_id" property="teamId"/>
+<result column="proj_id" property="projId"/>
+<result column="team_code" property="teamCode"/>
+<result column="team_name" property="teamName"/>
+<result column="team_desc" property="teamDesc"/>
+<result column="proj_chief" property="projChief"/>
+</resultMap>
+<!-- 根据项目id查询项目组id -->
+<select id="findTeamIdByProjId" parameterType="int" resultMap="projTeam">
+select * from proj_team where proj_id=#{projId}
+</select>
+<!-- 根据项目组ID查询项目组成员 -->
+ <select id="findUserIdByTeamId" parameterType="int" resultMap="userInfo">
+select * from user_info where user_id in (select user_id from team_member where team_id=#{teamIds})
+</select> 
+<!-- 分配bug -->
+<update id="updateAllocationBug" parameterType="BugInfo">
+update bug_info set update_by=#{updateBy},bug_state=1 where bug_num=#{bugNum}
+</update>
+<!-- 根据项目组成员查询所负责的项目 -->
+<select id="getProjByUser" parameterType="map" resultType="ProjectInfo">
+select proj_num projNum,proj_name projName FROM project_info
+<where>
+<if test="roleCodes.roleCode=='supper_manage'">
+and proj_num in(select proj_num from project_info)
+</if>
+<if test="roleCodes.roleCode=='PM'">
+and proj_chief=#{user.userId}
+</if>
+<if test="roleCodes.roleCode=='PL' or roleCodes.roleCode=='TL'">
+and proj_id =(select proj_id from proj_team where proj_chief=#{user.userId})
+</if>
+<if test="roleCodes.roleCode=='PE' or roleCodes.roleCode=='TM'">
+and proj_id =(select proj_id from proj_team where team_id=(select team_id from team_member where user_id =#{user.userId}))
+</if>
+</where>
+<!-- SELECT proj_id projId,`fns_buginfo`(proj_id) as projNames FROM proj_team WHERE team_id=(
+SELECT team_id FROM team_member WHERE user_id=1) -->
+</select>
+<!-- 根据项目查询模块 -->
+<select id="findClassByProj" resultType="SysClass" parameterType="ProjectInfo">
+SELECT class_name className ,class_id classId FROM sys_class WHERE parent_id in 
+(SELECT class_id FROM project_info WHERE proj_num=#{projNum})
+</select>
+<!-- 根据项目num查询项目id -->
+<select id="getProjIdByNum" parameterType="String" resultType="int">
+select proj_id projId from project_info where proj_num=#{projNum}
+</select>
+<!-- 根据执行人name查询执行人id -->
+<select id="getUserIdByName" parameterType="String" resultType="String">
+select GROUP_CONCAT(user_id) from user_info where user_name=#{userName}
+</select>
+<!-- 根据模块name查询模块id -->
+<select id="getBugIdByNum" parameterType="String" resultType="String">
+select GROUP_CONCAT(class_id) from sys_class where class_name =#{className}
+</select>
+<!-- 更改bug信息 -->
+<update id="updateBugByNum" parameterType="BugInfo">
+update bug_info
+<set>
+<if test="bugTitle!=null or bugTitle!=''">
+bug_title=#{bugTitle},
+</if>
+<if test="bugState!=null or bugState!=''">
+bug_state=#{bugState},
+</if>
+<if test="fileUrl!=null or fileUrl!=''">
+file_url=#{fileUrl},
+</if>
+</set>
+where bug_num=#{bugNum}
+</update>
+<!-- 根据num查询bug -->
+<select id="getBugByNum" parameterType="BugInfo" resultMap="BugInfo">
+select * ,`FN_BUGINFO`(`update_by`) as updateBys,
+`fns_buginfo`(`proj_id`) as projIds,
+`fn_class`(`class_id`) as classIds from bug_info
+ where bug_id=#{bugId}
+</select>
+<resultMap type="BugReply" id="BugReply">
+<id column="reply_id" property="replyId"/>
+<result column="bug_id" property="bugId"/>
+<result column="reply_content" property="replyContent"/>
+<result column="parent_id" property="parentId"/>
+<result column="create_time" property="createTime"/>
+<result column="create_by" property="createBy"/>
+<result column="is_delete" property="isDelete"/>
+<!-- <result column="`FN_BUGINFO`(create_by)" property="createBys"/> -->
+</resultMap>
+<!-- 根据num查询备注 -->
+<select id="findReplyByNum" resultMap="BugReply" parameterType="BugInfo">
+SELECT *, `FN_BUGINFO`(create_by) as createBys FROM bug_reply WHERE bug_id=#{bugId} AND is_delete=0
+</select>
+<!-- 增加留言 -->
+<insert id="addReply" parameterType="BugReply">
+insert into bug_reply(bug_id,reply_content,create_by) values
+ (#{bugId},#{replyContent},#{createBy})
+</insert>
+<!-- 删除留言 -->
+<update id="delReply" parameterType="BugReply">
+update bug_reply set is_delete=1 where reply_id=#{replyId}
+</update>
+<!-- 根据权限查询bug -->
+<select id="findNoBug" resultMap="BugInfo" parameterType="map">
+select * ,`FN_BUGINFO`(`update_by`) as updateBys,
+`fns_buginfo`(`proj_id`) as projIds,
+`fn_class`(`class_id`) as classIds from (select * from bug_info as BugInfo
+<where>
+<if test="roleCodes.roleCode=='supper_manage'">            
+and is_delete=0  and bug_state in (1,4) 
+</if>
+<if test="roleCodes.roleCode=='PM'">
+and proj_id in(select proj_id from project_info where proj_chief=#{user.userId}) and is_delete=0 
+and bug_state in (1,4)   
+</if>
+<if test="roleCodes.roleCode=='PL' or roleCodes.roleCode=='TL'">
+and class_id = (SELECT class_id FROM project_info 
+WHERE proj_id =(SELECT team_id FROM team_member 
+WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+ and bug_state in (1,4) 
+</if>
+<if test="roleCodes.roleCode=='TM'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+ and create_by=#{user.userId}
+ and bug_state in (1,4) 
+</if>
+<if test="roleCodes.roleCode=='PE'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id=(SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))) AND is_delete=0
+ AND proj_id=
+ <!-- 从项目组表查出项目id -->
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ <!-- 从成员表中查出项目组id -->
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+  AND update_by=#{user.userId}
+  and bug_state in (1,4) 
+</if>
+</where>) 
+<!-- 条件查询 -->
+<where>
+    <!-- 根据用户名查询 -->
+	<if test="bug.bugTitle!=null and  bug.bugTitle!=''">
+	and
+	bug_title like "%"#{bug.bugTitle}"%"
+	</if>
+	<!-- 根据执行人查询 -->
+	<if test="updatebys!=null and  updatebys!=''">
+	and
+	update_by in (#{updatebys})
+	</if>
+	<!-- 根据bug状态查询 -->
+	<if test="bug.bugState!=null and bug.bugState!=''">
+	and bug_state =#{bug.bugState}
+	</if>
+	<!-- 根据bug级别查询 -->
+	<if test="bug.bugLevel!=null and bug.bugLevel!=''">
+	and bug_level =#{bug.bugLevel}
+	</if>
+	<!-- 根据bug所属项目 -->
+	<if test="projids!=null and projids!=''">
+	and proj_id in (#{projids})
+	</if>
+	<!-- 根据bug所属模块 -->
+	<if test="classids!=null and classids!=''">
+	and class_id in ({classids})
+	</if>
+	<if test="bug.createTime!=null and bug.createTime!=''">
+	and (create_time &gt; #{bug.createTime}
+	or
+	create_time like concat(#{bug.createTime},'%'))
+	</if>
+	<if test="bug.createTime1!=null and bug.createTime1!=''">
+	and (create_time &lt; #{createTime1}
+	or create_time like
+	concat(#{createTime1},'%'))
+	</if>
+	order by create_time desc
+	<if test="imports==null or imports==''">
+	limit #{pageBean.pageIndex},#{pageBean.page}
+	</if>
+    <if test="'1'=='1'">
+	and bug_state in (1,4)
+	</if>
+	</where>
+    
+ 
+</select>
+
+<!-- 根据权限查询bug总数(分页查询) -->
+<select id="findNoBugSum" parameterType="map" resultType="Integer">
+select COUNT(*) from (select * from bug_info as BugInfo
+<where>
+<if test="roleCodes.roleCode=='supper_manage'">            
+and is_delete=0 And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='PM'">
+and proj_id in(select proj_id from project_info where proj_chief=#{user.userId}) and is_delete=0 And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='PL' or roleCodes.roleCode=='TL'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+ And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='TM'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+ and create_by=#{user.userId}
+ And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='PE'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id=(SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))) AND is_delete=0
+ AND proj_id=
+ <!-- 从项目组表查出项目id -->
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ <!-- 从成员表中查出项目组id -->
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+  AND update_by=#{user.userId}
+  And bug_state in (1,4)
+</if>
+</where>)
+<!-- 条件查询 -->
+ <where>
+    <!--根据用户名查询-->
+	<if test="bug.bugTitle!=null and  bug.bugTitle!=''">
+	and
+	bug_title like "%"#{bug.bugTitle}"%"
+	</if>
+	<!--根据执行人查询-->
+	<if test="updateBys!=null and  updateBys!=''">
+	and
+	update_by in (#{updateBys})
+	</if>
+	<!--根据bug级别查询-->
+	<if test="bug.bugLevel!=null and bug.bugLevel!=''">
+	and bug_level =#{bug.bugLevel}
+	</if>
+	<!--根据bug所属项目-->
+	<if test="projIds!=null and projId!=''">
+	and proj_id in (#{projIds})
+	</if>
+	<!--根据bug所属模块-->
+	<if test="classIds!=null and classIds!=''">
+	and class_id in ({classIds})
+	</if>
+	<if test="bug.createTime!=null and bug.createTime!=''">
+	and (create_time &gt; #{bug.createTime}
+	or
+	create_time like concat(#{bug.createTime},'%'))
+	</if>
+	<if test="bug.createTime1!=null and bug.createTime1!=''">
+	and (create_time &lt; #{createTime1}
+	or create_time like
+	concat(#{createTime1},'%'))
+	</if>
+	<if test="'1'=='1'">
+	and bug_state in (1,4)
+	</if>
+	</where>
+    
+</select>
+<!-- 项目中总bug -->
+<select id="findBugSumByProj" resultType="int" parameterType="int">
+select COUNT(*) from bug_info where proj_id = #{projId}
+</select>
+<!-- 项目中已经解决的bug -->
+<select id="findBugByProj" resultType="int" parameterType="int">
+select COUNT(*) from bug_info where proj_id = #{projId} and bug_State in (1,4)
+</select>
+<!-- 项目中未解决的bug -->
+<select id="findNoBugByProj" resultType="int" parameterType="int">
+select COUNT(*) from bug_info where proj_id = #{projId} and bug_State in (2,3)
+</select>
+<!-- 未解决bug的总数 -->
+<select id="findNoBugSums" parameterType="map" resultType="Integer">
+select COUNT(*) from bug_info as BugInfo
+<where>
+<if test="roleCodes.roleCode=='supper_manage'">            
+and is_delete=0 And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='PM'">
+and proj_id in(select proj_id from project_info where proj_chief=#{user.userId}) and is_delete=0 And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='PL' or roleCodes.roleCode=='TL'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+ And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='TM'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id =(SELECT team_id FROM team_member WHERE user_id=#{user.userId})) AND is_delete=0
+ AND proj_id=
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+ and create_by=#{user.userId}
+ And bug_state in (1,4)
+</if>
+<if test="roleCodes.roleCode=='PE'">
+and class_id = (SELECT class_id FROM project_info WHERE proj_id=(SELECT proj_id FROM proj_team WHERE team_id =
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))) AND is_delete=0
+ AND proj_id=
+ <!-- 从项目组表查出项目id -->
+ (SELECT proj_id FROM proj_team WHERE team_id =
+ <!-- 从成员表中查出项目组id -->
+ (SELECT team_id FROM team_member WHERE user_id=#{user.userId}))
+  AND update_by=#{user.userId}
+  And bug_state in (1,4)
+</if>
+</where>
+</select>
+<select id="findBugNameByBugName" parameterType="BugInfo" resultType="BugInfo">
+select bug_title from bug_info where bug_title like "%"#{bugTitle}"%"
+</select>
+</mapper>

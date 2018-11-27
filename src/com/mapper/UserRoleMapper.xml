@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.UserRoleMapper">
+
+	<resultMap id="ResultMap" type="Role">
+		<id column="role_id" property="roleId" />
+		<result column="role_name" property="roleName" />
+		<result column="role_desc" property="roleDesc" />
+		<result column="role_code" property="roleCode" />
+		<result column="role_state" property="roleState" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<!-- 查询全部角色roleName -->
+	<select id="selectRoleName" resultMap="ResultMap">
+		SELECT * FROM role where role_state='1'
+	</select>
+
+<!-- 根据前台传的ID查询用户角色 -->
+	<select id="selectRoleNameById" parameterType="UserRole" resultType="String">
+		SELECT GROUP_CONCAT(`role_id`) FROM `user_role` 
+		WHERE `user_id`=#{userId}
+	</select>
+	
+	<!-- 根据前台传来的用户ID删除角色ID -->
+	<delete id="deleUserRoleId" parameterType="java.util.HashMap">
+	DELETE FROM user_role WHERE user_id=#{userId}
+	</delete>
+	
+	<!-- 根据后台传来的用户ID给角色ID重新赋值 -->
+	<insert id="addUserRoleId" parameterType="java.util.HashMap">
+	insert into user_role (role_id,user_id) values (#{roleId},#{userId})
+	</insert>
+	
+	
+</mapper>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper  namespace="com.mapper.SysClassMapper">
+<resultMap type="SysClass" id="sysClassResult">
+		<id property="classId" column="class_id" />
+		<result property="className" column="class_name" />
+		<result property="parentId" column="parent_id" />
+		<result property="classDesc" column="class_desc" />
+		<result property="sysType" column="sys_type" />
+		<result property="grade" column="grade" />
+		<result property="classCode" column="class_code" />
+		
+</resultMap>
+<!-- 查询所有系统分类 -->
+<select id="selectSysClass" resultMap="sysClassResult">
+ select * from sys_class
+</select>
+<!-- 查询 系统名称，是否已存在-->
+<select id="findSysClass" parameterType="java.util.HashMap" resultMap="sysClassResult">
+  select * from sys_class where class_name=#{className}
+</select>
+<!-- 添加新的项目 -->
+<insert id="addClass" parameterType="java.util.HashMap">
+ insert into sys_class  (class_name,
+  parent_id,class_desc,sys_type,grade,class_code)
+  values (#{sysClass.className},#{sysClass.parentId},#{sysClass.classDesc},#{sysClass.sysType},#{grade},#{sysClass.classCode})
+</insert>
+<!-- 修改项目 -->
+<update id="updateSysClass" parameterType="SysClass" >
+  update sys_class set class_name=#{className},class_desc=#{classDesc},class_code=#{classCode}  where class_id=#{classId}
+</update>
+</mapper>
+
+

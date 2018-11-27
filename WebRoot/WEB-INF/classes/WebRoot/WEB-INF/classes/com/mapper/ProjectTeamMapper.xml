@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.ProjectTeamMapper" >
+
+<resultMap id="Role" type="Role">
+		<id column="role_id" property="roleId" />
+		<result column="role_name" property="roleName" />
+		<result column="role_desc" property="roleDesc" />
+		<result column="role_code" property="roleCode" />
+		<result column="role_state" property="roleState" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+</resultMap>
+
+<resultMap type="ProjTeam" id="ProjTeam">
+		<id column="team_id" property="teamId" />
+		<result column="proj_id" property="projId" />
+		<result column="team_code" property="teamCode" />
+		<result column="team_name" property="teamName" />
+		<result column="team_desc" property="teamDesc" />
+		<result column="proj_chief" property="projChief" />
+</resultMap>
+
+<resultMap type="ProjectInfo" id="Projinfo">
+		<id column="proj_id" property="projId" />
+		<result column="class_id" property="classId" />
+		<result column="proj_name" property="projName" />
+		<result column="proj_num" property="projNum" />
+		<result column="proj_desc" property="projDesc" />
+		<result column="vistor_type" property="vistorType" />
+		<result column="create_time" property="createTime" />
+		<result column="create_by" property="createBy" />
+		<result column="start_time" property="startTime" />
+		<result column="end_time" property="endTime" />
+		<result column="able_day" property="ableDay" />
+		<result column="proj_state" property="projState" />
+		<result column="proj_chief" property="projChief" />
+		<result column="remark" property="remark" />
+</resultMap>
+
+
+<resultMap type="TeamMember" id="TeamMember">
+		<id column="member_id" property="memberId"/>
+		<result column="team_id" property="teamId"/>
+		<result column="user_id" property="userId"/>
+</resultMap>
+
+
+<resultMap id="userInfo" type="UserInfo">
+		<id column="user_id" property="userId" />
+		<result column="group_id" property="groupId" />
+		<result column="user_name" property="userName" />
+		<result column="nick_name" property="nickName" />
+		<result column="user_code" property="userCode" />
+		<result column="user_pwd" property="userPwd" />
+		<result column="user_type" property="userType" />
+		<result column="user_state" property="userState" />
+		<result column="is_delete" property="isDelete" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	
+<resultMap id="ProjTask" type="ProjTask">
+		<id column="task_id" property="taskId" />
+		<result column="proj_id" property="projId" />
+		<result column="task_name" property="taskName" />
+		<result column="task_desc" property="taskDesc" />
+		<result column="excutor" property="excutor" />
+		<result column="task_state" property="taskState" />
+		<result column="create_time" property="CreateTime" />
+		<result column="create_by" property="createBy" />
+		<result column="class_id" property="classId" />
+		<result column="able_day" property="ableDay" />
+		<result column="start_time" property="startTime" />
+		<result column="end_time" property="endTime" />
+		<result column="plan_time" property="planTime" />
+		<result column="finish_time" property="finishTime" />
+		<result column="process" property="process" />
+		<result column="is_delete" property="isDelete" />
+		<result column="remark" property="remark" />
+</resultMap>	
+<!-- 查询用户对应角色 -->
+<select id="getRole" parameterType="int" resultMap="Role">
+select * from Role where role_id in (select role_id from user_role where user_id=#{userId})
+</select>
+
+
+<!-- 查询项目组信息 -->
+<select id="findProjTeamAll" parameterType="Map" resultMap="ProjTeam">
+select * from proj_team where 1=1
+ <!-- 项目经理 -->
+<if test="roleId==2">
+and proj_id in (select proj_id from project_info where proj_chief=#{userId})
+</if>
+<!-- 项目组长 -->
+<if test="roleId==3 or roleId==6">
+and proj_chief=#{userId}
+</if>
+<!-- 项目组成员 -->
+<if test="roleId==5 or roleId==7">
+and team_id = (select team_id from team_member where user_id=#{userId}) 
+</if>
+<!-- 项目 -->
+<if test="projTeam.projId!=null and projTeam.projId!=''">
+and proj_id=#{projTeam.projId}
+</if>
+<!-- 项目组 -->
+<if test="projTeam.teamName!=null and projTeam.teamName!=''">
+and team_name like "%"#{projTeam.teamName}"%"
+</if>
+<!-- 负责人 -->
+<if test="projTeam.projChief!=null and projTeam.projChief!=''">
+and proj_chief=#{projTeam.projChief}
+</if>
+limit #{pageBean.pageIndex},#{pageBean.page}
+</select>
+
+
+<!-- 查询项目组信息条数 -->
+<select id="countProjTeamAll" parameterType="Map" resultType="int">
+select count(*) from proj_team where 1=1
+ <!-- 项目经理 -->
+<if test="roleId==2">
+and proj_id in (select proj_id from project_info where proj_chief=#{userId})
+</if>
+<!-- 项目组长 -->
+<if test="roleId==3 or roleId==6">
+and proj_chief=#{userId}
+</if>
+<!-- 项目组成员 -->
+<if test="roleId==5 or roleId==7">
+and team_id = (select team_id from team_member where user_id=#{userId}) 
+</if>
+<!-- 项目 -->
+<if test="projTeam.projId!=null and projTeam.projId!=''">
+and proj_id=#{projTeam.projId}
+</if>
+<!-- 项目组 -->
+<if test="projTeam.teamName!=null and projTeam.teamName!=''">
+and team_name like "%"#{projTeam.teamName}"%"
+</if>
+<!-- 负责人 -->
+<if test="projTeam.projChief!=null and projTeam.projChief!=''">
+and proj_chief=#{projTeam.projChief}
+</if>
+
+</select>
+
+
+<!-- 查询项目信息 -->
+<select id="findProjInfo" parameterType="Map" resultMap="Projinfo">
+select * from project_info where 1=1
+<!-- 项目经理 -->
+<if test="roleId==2">
+and  proj_chief=#{userId}
+</if>
+<!-- 项目组长/项目组成员  -->
+<if test="roleId==3 or roleId==6 or roleId==7 or roleId==5">
+and proj_id in (select proj_id from proj_team where
+ team_id in (select team_id from team_member where user_id=#{userId}))
+</if>
+</select>
+<!-- 查询项目下所有成员 -->
+<select id="findUserByProjId" parameterType="ProjectInfo" resultMap="userInfo">
+select * from user_info where user_id in(select user_id from team_member where 
+team_id in(select team_id from proj_team where proj_id=#{projId})) 
+</select>
+<!-- 创建项目组 -->
+<insert id="insertProjTeam" parameterType="ProjTeam">
+insert into proj_team values(#{teamId},#{projId},#{teamCode},#{teamName},#{teamDesc},#{projChief})
+</insert>
+<!-- 查询项目组是否存在 -->
+<select id="getCountTeam" parameterType="ProjTeam" resultType="int">
+select count(*) from proj_team where team_name=#{teamName}
+</select>
+<!-- 查询项目组成员 -->
+ <select id="findUserByProjTeamId" parameterType="Map" resultMap="userInfo">
+select * from user_info where user_id in 
+ (select user_id from team_member where team_id=#{projTeam.teamId}) 
+ <if test="userInfo.userName!=null and userInfo.userName!=''">
+ and  user_id in (select user_id from user_info where user_name like "%"#{userInfo.userName}"%")
+ </if>
+ limit #{pageBean.pageIndex},#{pageBean.page}
+</select> 
+<!-- 查询用户在哪个项目组 -->
+<select id="getCountTeamUser" parameterType="TeamMember" resultMap="TeamMember">
+select * from team_member where user_id=#{userId}
+</select>
+
+<select id="findUserBy" resultMap="userInfo">
+select * from user_info where user_id in 
+ (select user_id from user_role where (role_id=5 or role_id=7)) and group_id=4 and user_id not in 
+ (select user_id from team_member)
+</select>
+
+<insert id="addTeamUser" parameterType="TeamMember">
+insert into team_member(team_id,user_id) values(#{teamId},#{userId})
+</insert>
+
+<select id="findCountTeamAll" parameterType="Map" resultType="int">
+select count(*) from user_info where user_id in 
+ (select user_id from team_member where team_id=#{projTeam.teamId}) 
+ <if test="userInfo.userName!=null and userInfo.userName!=''">
+ and  user_id in (select user_id from user_info where user_name like "%"#{userInfo.userName}"%")
+ </if>
+</select>
+
+<delete id="deleteTeamUser" parameterType="TeamMember">
+delete from team_member where user_id=#{userId} and team_id=#{teamId}
+</delete>
+<!-- 查询分配人员所在用户组之外的用户组 -->
+<select id="selectProjTask" parameterType="UserInfo" resultMap="ProjTeam">
+select * from proj_team where team_id not in (select team_id from team_member where user_id = #{userId})
+</select>
+<!-- 查询成员执行任务 -->
+<select id="findTaskId" parameterType="Map" resultMap="ProjTask">
+select * from proj_task where proj_id=(
+select proj_id from project_info where  proj_chief=#{excutor}) and excutor = #{excutor} 
+</select>
+
+<!--修改任务状态为已暂停  -->
+<update id="updateTaskState" parameterType="int">
+update proj_task set task_state='2' where task_id=#{taskId}
+</update>
+<!--将任务执行人重置为空  -->
+<update id="updateExcutor" parameterType="int">
+update proj_task set excutor=null where task_id=#{taskId}
+</update>
+<!-- 修改项目成员表 -->
+<!-- 删除成员在项目成员表信息 -->
+<delete id="deleteTeamMember" parameterType="int">
+delete from team_member where user_id=#{userIds}
+</delete>
+<!-- 新增项目成员表 -->
+<insert id="insertTeamMember" parameterType="Map">
+insert into team_member(team_id,user_id) values(#{teamIds},#{excutor})
+</insert>
+</mapper>
+

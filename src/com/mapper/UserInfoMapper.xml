@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.UserInfoMapper">
+
+	<resultMap id="BaseResultMap" type="AuthInfo">
+		<id column="auth_id" property="authId" />
+		<result column="parent_id" property="parentId" />
+		<result column="auth_name" property="authName" />
+		<result column="auth_desc" property="authDesc" />
+		<result column="auth_grade" property="authGrade" />
+		<result column="auth_type" property="authType" />
+		<result column="auth_url" property="authUrl" />
+		<result column="auth_code" property="authCode" />
+		<result column="auth_order" property="authOrder" />
+		<result column="auth_state" property="authState" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<resultMap id="userInfo" type="UserInfo">
+		<id column="user_id" property="userId" />
+		<result column="group_id" property="groupId" />
+		<result column="user_name" property="userName" />
+		<result column="nick_name" property="nickName" />
+		<result column="user_code" property="userCode" />
+		<result column="user_pwd" property="userPwd" />
+		<result column="user_type" property="userType" />
+		<result column="user_state" property="userState" />
+		<result column="is_delete" property="isDelete" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+	<!-- 查询数据库所有用户信息，用来测试数据库是否连接上 -->
+	<select id="selectAll" resultType="UserInfo">
+		select user_name
+		userName,nick_name nickName,user_pwd userPwd from User_info
+	</select>
+
+	<!-- 比对数据库的用户名和密码 -->
+	<select id="login" parameterType="UserInfo" resultMap="userInfo">
+		SELECT * FROM user_info
+		WHERE user_code=#{userCode} AND user_pwd=MD5(#{userPwd}) and user_state='1'
+	</select>
+
+	<!-- 查询用户权限，传入用户对象，返回集合对象 -->
+	<select id="selectUserAuth" parameterType="java.util.HashMap"
+		resultMap="BaseResultMap">
+		SELECT * FROM AUTH_INFO
+		WHERE `auth_id` IN (
+		SELECT
+		roleAuth.`auth_id` FROM ROLE_AUTH AS roleAuth,ROLE AS role
+		WHERE
+		roleAuth.`role_id`=role.`role_id`
+		AND roleAuth.`role_id` IN
+		(SELECT
+		`role_id` FROM USER_ROLE
+		WHERE `user_id`=#{UserInfo.userId}
+		)
+		AND
+		role.`role_state`='1'
+		)
+		AND `auth_state`='1'
+		AND `parent_id`=#{authId}
+		UNION
+		SELECT auth.* FROM user_auth AS userAuth,AUTH_INFO AS auth
+		WHERE
+		userAuth.`auth_id`=auth.`auth_id`
+		AND auth.`auth_state`='1'
+		AND
+		userAuth.`user_id`=#{UserInfo.userId}
+		AND auth.`parent_id`=#{authId}
+		UNION
+		SELECT * FROM AUTH_INFO
+		WHERE `auth_id` IN (
+		SELECT
+		roleAuth.`auth_id` FROM ROLE_AUTH AS roleAuth,ROLE AS role
+		WHERE
+		roleAuth.`role_id`=role.`role_id`
+		AND roleAuth.`role_id` IN
+		( SELECT
+		`role_id` FROM group_role
+		WHERE `group_id`=#{UserInfo.groupId}
+		)
+		AND
+		role.`role_state`='1'
+		)
+		AND `auth_state`='1'
+		AND `parent_id`=#{authId}
+	</select>
+
+	<!-- 查询用户列表 分页 -->
+	<select id="selectUserInfo" parameterType="java.util.HashMap"
+		resultMap="userInfo">
+		select * from user_info
+
+		<where>
+			is_delete='0'
+			<if test="userInfo.userName!=null and  userInfo.userName!=''">
+				and
+				user_name like "%"#{userInfo.userName}"%"
+			</if>
+
+			<if test="userInfo.userState!=null and userInfo.userState!=''">
+				and user_state like "%"#{userInfo.userState}"%"
+			</if>
+
+			<if test="userInfo.createTime!=null and userInfo.createTime!=''">
+				and (create_time &gt; #{userInfo.createTime}
+				or
+				create_time like concat(#{userInfo.createTime},'%'))
+			</if>
+
+			<if test="createTime1!=null and createTime1!=''">
+				and (create_time &lt; #{createTime1}
+				or create_time like
+				concat(#{createTime1},'%'))
+			</if>
+		</where>
+		order by update_time desc
+		<if test="imports==null or imports==''">
+			limit #{pageBean.pageIndex},#{pageBean.page}
+		</if>
+	</select>
+
+	<!-- 查询用户的总条数 -->
+	<select id="getUserCount" parameterType="UserInfo" resultType="java.lang.Integer">
+		SELECT count(*) FROM user_info
+		<where>
+			is_delete='0'
+			<if test=" userName!=null and userName!=''">
+				and user_name like "%"#{userName}"%"
+			</if>
+			<if test="userState!=null and userState!=''">
+				and user_state like "%"#{userState}"%"
+			</if>
+		</where>
+	</select>
+
+	<!-- 根据前台传过来的用户ID修改删除状态 -->
+	<update id="updateStatic" parameterType="Long">
+		UPDATE user_info SET
+		is_delete=1
+		WHERE user_id = #{userId}
+	</update>
+
+	<!-- 根据前台传来的用户ID修改用户状态 -->
+	<update id="updateStatics" parameterType="UserInfo">
+		UPDATE user_info SET
+		user_state=0
+		WHERE user_id = #{userId}
+	</update>
+
+	<!-- 新增用户 -->
+	<insert id="addUserInfo" parameterType="UserInfo">
+		INSERT INTO
+		user_info(user_name,user_code,user_pwd) values(#{userName},#{userName},MD5(#{userPwd}))
+	</insert>
+	<!-- 新增用户的同时根据用户名比对数据库是否存在此用户名 -->
+	<select id="selectUserByName" parameterType="UserInfo"
+		resultType="UserInfo">
+		SELECT *FROM user_info WHERE user_name=#{userName}
+	</select>
+
+	<!-- 重置密码 -->
+	<update id="updatapswd" parameterType="UserInfo">
+		UPDATE user_info SET
+		user_pwd=MD5('123456') WHERE user_id=#{userId}
+		
+	</update>
+
+	<!-- 启用禁用 -->
+	<update id="updataStaticById" parameterType="java.util.HashMap">
+		update user_info set
+		user_state=#{userState} where user_id=#{UserInfo.userId}
+	</update>
+
+	<!-- 根据用户id改密码和昵称 -->
+	<update id="updatapswds" parameterType="UserInfo">
+		UPDATE user_info SET group_id=#{groupId},nick_name=#{nickName},user_pwd=MD5(#{userPwd}) WHERE 
+		 user_id=#{userId}
+	</update>
+	
+	<!-- 查询研发部人员 -->
+	<select id="findUserByGroupId" resultMap="userInfo">
+	select * from user_info where group_id=4 
+	and user_id not in (select user_id from user_role where role_id=1 or role_id=2)
+	</select>
+	
+	<!-- 以下是麻斌写的 -->
+	<!-- 查询所有的项目经理 -->
+	<select id="findProjManagers" resultMap="userInfo">
+		select * from user_info where 
+		 is_delete ='0' and user_state = '1' and
+		user_id in
+		(select user_id from user_role where role_id in
+		(select role_id from role where role_code = 'PM')
+		)
+	</select>
+	<!-- 分页查询要添加白名单的成员 -->
+	<select id="findUserAdd" parameterType="java.util.HashMap" resultMap="userInfo">
+	select * from user_info
+	where CHECK_USER(#{proj.projId},user_id) and user_name like concat("%",#{user.userName},"%") 
+	limit #{page.pageIndex},#{page.page}
+	</select>
+	<!-- 查询要添加白名单的成员的数量 -->
+	<select id="getUserAddNumber" parameterType="java.util.HashMap" resultType="int">
+	select count(0) from user_info
+	where CHECK_USER(#{proj.projId},user_id) and user_name like concat("%",#{user.userName},"%") 
+	</select>
+	<!-- 根据userIds字符串查询用户 -->
+	<select id="findUsersByIds" parameterType="String" resultMap="userInfo">
+	select * from user_info where user_id in(${value})
+	</select>
+	<!-- 查询指定项目项目组成员 -->
+	<select id="findProjUsers" parameterType="ProjectInfo" resultMap="userInfo">
+	select * from user_info where user_id in(
+	select user_id from team_member where team_id in(
+	select team_id from proj_team where proj_id=#{projId}
+	))
+	</select>
+	<!-- 查询指定项目白名单  -->
+	<select id="findProjWhite" parameterType="ProjectInfo" resultMap="userInfo">
+	select * from user_info where user_id in(
+	select user_id from proj_user_list where proj_id = #{projId}
+	)
+	</select>
+	<!-- 根据用户Id查询单个用户 -->
+	<select id="getUserById" parameterType="UserInfo" resultMap="userInfo">
+	select * from user_info where user_id = #{userId}
+	</select>
+	<select id="findAllUsers" resultMap="userInfo">
+	select * from user_info
+	</select>
+</mapper>
+
+

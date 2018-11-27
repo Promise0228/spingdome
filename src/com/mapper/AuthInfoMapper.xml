@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.AuthInfoMapper">
+	<resultMap id="BaseResultMap" type="AuthInfo">
+		<id column="auth_id" property="authId" />
+		<result column="parent_id" property="parentId" />
+		<result column="auth_name" property="authName" />
+		<result column="auth_desc" property="authDesc" />
+		<result column="auth_grade" property="authGrade" />
+		<result column="auth_type" property="authType" />
+		<result column="auth_url" property="authUrl" />
+		<result column="auth_code" property="authCode" />
+		<result column="auth_order" property="authOrder" />
+		<result column="auth_state" property="authState" />
+		<result column="create_by" property="createBy" />
+		<result column="create_time" property="createTime" />
+		<result column="udate_by" property="udateBy" />
+		<result column="update_time" property="updateTime" />
+	</resultMap>
+
+	<!-- 查询所有权限 -->
+	<select id="selectAuth" resultMap="BaseResultMap">
+		SELECT * FROM `auth_info`
+		 ORDER BY `auth_order` DESC
+	</select>
+
+	<!-- 新增权限 -->
+	<insert id="addAuth" parameterType="java.util.HashMap">
+		INSERT INTO auth_info(parent_id,auth_name,auth_desc,auth_grade,auth_type,auth_url,auth_code,create_by)
+		 VALUES(#{authInnfo.parentId},#{authInnfo.authName},#{authInnfo.authDesc},#{authInnfo.authGrade},#{authInnfo.authType},#{authInnfo.authUrl},#{authInnfo.authCode},#{userInfo.userId})
+		  
+	</insert>
+
+	<!-- 根据传进来的权限ID判断权限code和权限名字是不是唯一 -->
+	<select id="selectAuthById" parameterType="java.util.HashMap" resultMap="BaseResultMap">
+	  select auth_code from auth_info 
+	  <where>
+	  <if test="authInnfo.authCode!=null and authInnfo.authCode!=''">
+	     or auth_code=#{authInnfo.authCode} 
+	  </if>
+	  <if test="authInnfo.authName!=null and authInnfo.authName!=''">
+	   or  auth_name=#{authInnfo.authName}
+	   </if>
+	   </where> 
+	</select>
+
+		<!-- 查询系统中所有有效的权限 -->
+	<select id="selectAuthAll" resultMap="BaseResultMap">
+	SELECT * FROM AUTH_INFO
+	WHERE `auth_state`='1'
+	ORDER BY `auth_grade` DESC
+	</select>
+	
+	<!-- 根据权限等级传进来的数据对数据库进行更改 -->
+	<update id="updateAuthInfo" parameterType="java.util.HashMap" >
+	UPDATE auth_info SET auth_name=#{authInfo.authName},auth_desc=#{authInfo.authDesc},auth_url=#{authInfo.authUrl} WHERE auth_id=#{authInfo.authId}
+	</update>
+	
+	<!-- 删除权限之前根据传来的权限ID查询有无数据 -->
+	<select id="selectAuthsById" parameterType="AuthInfo" resultMap="BaseResultMap">
+	SELECT * FROM auth_info WHERE parent_id=#{authId} AND auth_state=1
+	</select>
+	
+	<!-- 删除权限 -->
+	<update id="deleAuth" parameterType="AuthInfo" >
+	UPDATE auth_info SET auth_state=0 WHERE auth_id=#{authId}
+	</update>
+	
+	<!-- 根据传进来的ID查询当前权限是否可用(状态) -->
+	<select id="selectAuthByIds" parameterType="AuthInfo"  resultMap="BaseResultMap">
+	SELECT * FROM auth_info WHERE auth_id=#{authId} AND auth_state=0
+	</select>
+	
+	<!-- 根据传进来的authID查询用户所有信息 -->
+	<select id="selectAuthByAuthId"  parameterType="AuthInfo" resultMap="BaseResultMap">
+	SELECT *FROM auth_info WHERE auth_id=#{authId}
+	</select>
+	
+	<!-- 根据查询的父ID作为权限ID进行查询上级有没有权限 -->
+	<select id="selectAuthByAuthIds" parameterType="AuthInfo" resultMap="BaseResultMap">
+	SELECT * FROM auth_info WHERE auth_id=#{parentId} AND auth_state=0
+	</select>
+	
+	<!-- 恢复权限 -->
+	<update id="resumeAuth" parameterType="AuthInfo" >
+	UPDATE auth_info SET auth_state='1' WHERE auth_id=#{authId}
+	</update>
+</mapper>

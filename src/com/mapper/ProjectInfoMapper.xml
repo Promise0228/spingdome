@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mapper.ProjectInfoMapper">
+	
+	<resultMap type="SysClass" id="sysClassResult">
+		<id property="classId" column="class_id" />
+		<result property="className" column="class_name" />
+		<result property="parentId" column="parent_id" />
+		<result property="classDesc" column="class_desc" />
+		<result property="sysType" column="sys_type" />
+		<result property="grade" column="grade" />
+		<result property="classCode" column="class_code" />
+		
+</resultMap>
+	<!-- 将proj表映射到Proj类 -->
+	<resultMap id="projMap" type="ProjectInfo">
+		<id column="proj_id" property="projId" />
+		<result column="class_id" property="classId" />
+		<result column="proj_name" property="projName" />
+		<result column="proj_num" property="projNum" />
+		<result column="proj_desc" property="projDesc" />
+		<result column="vistor_type" property="vistorType" />
+		<result column="create_time" property="createTime" />
+		<result column="create_by" property="createBy" />
+		<result column="start_time" property="startTime" />
+		<result column="end_time" property="endTime" />
+		<result column="able_day" property="ableDay" />
+		<result column="start_time" property="startTime" />
+		<result column="proj_state" property="projState" />
+		<result column="proj_chief" property="projChief" />
+		<result column="remark" property="remark" />
+	</resultMap>
+<!-- 根据用户及项目条件动态查询项目 -->
+<select id="findProjs" parameterType="java.util.HashMap" resultMap="projMap">
+	select * from project_info 
+	<include refid="selectProj"></include>
+	limit #{page.pageIndex},#{page.page}
+</select>
+<!-- 查询条件 -->
+<sql id="selectProj">
+<where>
+	<if test="userId!=0">
+		and GET_PROJ(#{userId},proj_id)
+	</if>
+	<if test="proj!=null">
+		<if test="proj.projName!=null and proj.projName!=''">
+			and proj_name like "%"#{proj.projName}"%"
+		</if>
+		<if test="proj.projState!=null and proj.projState!=''">
+			and proj_state = #{proj.projState}
+		</if>
+		<if test="proj.createTime!=null and proj.createTime!=''">
+			and (create_time &lt; #{proj.createTime} 
+			or create_time like #{proj.createTime}"%")
+		</if>
+	</if>
+</where>
+</sql>
+
+<!-- 按条件查询项目条数 -->
+<select id="getProjsNumber" parameterType="java.util.HashMap" resultType="Integer">
+select count(0) from project_info
+<include refid="selectProj"></include>
+</select>
+<!-- 添加项目 -->
+<insert id="addProj" parameterType="java.util.HashMap" >
+insert into project_info
+(proj_state,class_id,proj_name,proj_num,vistor_type,create_time,create_by,start_time,
+end_time,able_day,proj_chief)
+values('0',#{proj.classId},
+#{proj.projName},#{proj.projNum},#{proj.vistorType},now(),#{user.userId},
+#{proj.startTime},#{proj.endTime},#{proj.ableDay},#{proj.projChief}
+)
+</insert>
+<!-- 项目名称及项目编码查重 -->
+<select id="checkProj" parameterType="ProjectInfo" resultType="int">
+select count(0) from project_info
+<where>
+<if test="projName!=null and projName!=''">
+proj_name = #{projName}
+</if>
+<if test="projNum!=null and projNum!=''">
+or proj_num = #{projNum}
+</if>
+</where>
+</select>
+<!-- 添加白名单 --> 
+<insert id="addWhiteSheet" parameterType="java.util.HashMap">
+insert into proj_user_list(proj_id,user_id) values(#{projId},#{userId})
+</insert>
+<!-- 通过项目Id查询指定项目 -->
+<select id="getProjById" parameterType="ProjectInfo" resultMap="projMap">
+select * from project_info where proj_id=#{projId}
+</select> 
+<!-- 修改指定项目Id的项目 -->
+<update id="updateProj" parameterType="ProjectInfo">
+update project_info set 
+vistor_type = #{vistorType},start_time =#{startTime},end_time=#{endTime},
+able_day=#{ableDay},remark=#{remark}
+where proj_id=#{projId}
+</update>
+<!-- 项目动态表映射项目动态类 -->
+<resultMap type="ProjDynamic" id="projDynaMap">
+<id column="dynamic_id" property="dynamicId"/>
+<result column="proj_id" property="projId"/>
+<result column="dynamic_desc" property="dynamicDesc"/>
+<result column="create_time" property="createTime"/>
+<result column="user_name" property="userName"/>
+<result column="parent_d" property="parentId"/>
+<result column="is_delete" property="isDelete"/>
+</resultMap>
+<!-- 查询指定项目Id的项目动态-->
+<select id="findProjDynas" parameterType="java.util.HashMap" resultMap="projDynaMap">
+select * from proj_dynamic 
+where proj_id=#{projDyna.projId} and parent_d=0
+<if test="projDyna.createTime!=null and projDyna.createTime!=''">
+and (create_time &lt;#{projDyna.createTime} or create_time like concat("%",#{projDyna.createTime},"%"))
+</if>
+<if test="projDyna.userName!=null and projDyna.userName!=''">
+and user_name like concat("%",#{projDyna.userName},"%")
+</if>
+order by create_time desc
+limit #{page.pageIndex},#{page.page} 
+</select>
+<!-- 查询指定父动态Id的项目动态回复 -->
+<select id="findProjDynaComments" parameterType="Integer" resultMap="projDynaMap">
+select * from proj_dynamic 
+where parent_d=#{parentId}
+</select>
+<!-- 查询指定项目Id项目动态条数 -->
+<select id="getProjDynasNum" parameterType="java.util.HashMap" resultType="Integer">
+select count(0) from proj_dynamic where proj_id=#{projDyna.projId} and parent_d=0
+<if test="projDyna.createTime!=null and projDyna.createTime!=''">
+and (create_time &lt; #{projDyna.createTime} or create_time like concat("%",#{projDyna.createTime},"%"))
+</if>
+<if test="projDyna.userName!=null and projDyna.userName!=''">
+and user_name like #{projDyna.userName}
+</if>
+</select>
+<!-- 添加项目动态或回复 -->
+<insert id="addProjDynamic" parameterType="java.util.HashMap">
+insert into proj_dynamic
+(proj_id,dynamic_desc,create_time,user_name,parent_d,is_delete)
+values(#{projDyna.projId},#{projDyna.dynamicDesc},now(),#{user.userName},#{projDyna.parentId},'0')
+</insert>
+<!-- 查询指定项目Id的已消耗时间 -->
+<select id="getProjExpend" parameterType="ProjectInfo" resultType="Integer">
+SELECT SUM(able_day * `process` / 100) FROM `proj_task` 
+WHERE proj_id =#{projId}
+</select>
+<!-- 删除项目白名单 -->
+<delete id="delWhiteSheet" parameterType="ProjectInfo">
+delete from proj_user_list where proj_id = #{projId}
+</delete>
+<!-- 查询项目基本信息列表 -->
+<select id="findprojectInfo" resultMap="projMap">
+     SELECT * FROM `project_info`
+</select>
+<!-- 添加项目时添加系统分类 -->
+<insert id="addSysClass" parameterType="java.util.HashMap">
+insert into sys_class(class_name,parent_id,sys_type,class_code) 
+values(#{projName},0,2,#{projNum}) 
+</insert>
+<!-- 查询项目系统分类Id -->
+<select id="getSysClassByProj" parameterType="ProjectInfo" resultMap="sysClassResult">
+select * from sys_class where class_code = #{projNum}
+</select>
+</mapper>
